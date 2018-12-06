@@ -4,11 +4,11 @@
 
 FROM blueimp/basedriver
 
-# Install chromedriver (which depends on chromium):
+# Install chromium:
 RUN export DEBIAN_FRONTEND=noninteractive \
   && apt-get update \
-  && apt-get install --no-install-recommends --no-install-suggests -y \
-    chromedriver \
+  && apt-get -yqq install curl unzip \
+  && apt-get install --no-install-recommends --no-install-suggests -y chromium \
   # Start chromium via wrapper script with --no-sandbox argument:
   && mv /usr/lib/chromium/chromium /usr/lib/chromium/chromium-original \
   && printf '%s\n' '#!/bin/sh' \
@@ -23,9 +23,15 @@ RUN export DEBIAN_FRONTEND=noninteractive \
     /var/lib/apt/lists/* \
     /var/tmp/*
 
-# Make chromedriver available in the PATH:
-RUN ln -s /usr/lib/chromium/chromedriver /usr/local/bin/
+# Install chromedriver
+RUN CHROMEDRIVER_VERSION=`curl -sS chromedriver.storage.googleapis.com/LATEST_RELEASE` && \
+    mkdir -p /opt/chromedriver-$CHROMEDRIVER_VERSION && \
+    curl -sS -o /tmp/chromedriver_linux64.zip http://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip && \
+    unzip -qq /tmp/chromedriver_linux64.zip -d /opt/chromedriver-$CHROMEDRIVER_VERSION && \
+    rm /tmp/chromedriver_linux64.zip && \
+    chmod +x /opt/chromedriver-$CHROMEDRIVER_VERSION/chromedriver && \
+    ln -fs /opt/chromedriver-$CHROMEDRIVER_VERSION/chromedriver /usr/local/bin/chromedriver
 
 USER webdriver
 
-CMD ["chromedriver", "--url-base=/wd/hub", "--port=4444", "--whitelisted-ips="]
+CMD ["chromedriver", "--url-base=/wd/hub", "--port=4444", "--whitelisted-ips=", "--log-level=WARNING"]
